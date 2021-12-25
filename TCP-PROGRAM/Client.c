@@ -1,47 +1,36 @@
-#include <stdio.h>
 #include <netdb.h>
-#include <netinet/in.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #define MAX 80
 #define PORT 8080
 #define SA struct sockaddr
-int length(char c[MAX]){
-	int i=0;
-	int count=0;
-	while(c[i]!='\0'){
-		if(c[i]!=' ')count++;
-		i++;
-	}
-	return count;
-}
-
 void func(int sockfd)
 {
     char buff[MAX];
     int n;
+    int data=0;
     for (;;) {
-  	bzero(buff, MAX);
-        read(sockfd, buff, sizeof(buff));
-        printf("Date received %s ", buff);
-      	int len =length(buff);
-      	
-      	len=htonl(len-1);
-        write(sockfd,&len , sizeof(len));
-  
-        if (strncmp("exit", buff, 4) == 0) {
-            printf("Server Exit...\n");
+        bzero(buff, sizeof(buff));
+        printf("Enter the string : ");
+        n = 0;
+        while ((buff[n++] = getchar()) != '\n');
+        write(sockfd, buff, sizeof(buff));
+        bzero(buff, sizeof(buff));
+        
+        read(sockfd, &data, sizeof(data));
+        printf("Number of Characters : %d", ntohl(data));
+        if ((strncmp(buff, "exit", 4)) == 0) {
+            printf("Client Exit...\n");
             break;
         }
     }
 }
   
-
 int main()
 {
-    int sockfd, connfd, len;
+    int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
   
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -54,33 +43,17 @@ int main()
     bzero(&servaddr, sizeof(servaddr));
   
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_port = htons(PORT);
   
-    if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) {
-        printf("socket bind failed...\n");
+    if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) {
+        printf("connection with the server failed...\n");
         exit(0);
     }
     else
-        printf("Socket successfully binded..\n");
+        printf("connected to the server..\n");
   
-    if ((listen(sockfd, 5)) != 0) {
-        printf("Listen failed...\n");
-        exit(0);
-    }
-    else
-        printf("Server listening..\n");
-    len = sizeof(cli);
-  
-    connfd = accept(sockfd, (SA*)&cli, &len);
-    if (connfd < 0) {
-        printf("server acccept failed...\n");
-        exit(0);
-    }
-    else
-        printf("server acccept the client...\n");
-  
-    func(connfd);
+    func(sockfd);
   
     close(sockfd);
 }
